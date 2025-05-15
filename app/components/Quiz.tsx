@@ -35,24 +35,27 @@ export default function Quiz() {
     setShuffledQuestions([...questions].sort(() => Math.random() - 0.5));
   };
 
-  if (!shuffledQuestions.length) return <div>Loading...</div>;
+  if (!shuffledQuestions.length)
+    return <div className="text-gray-900">Loading...</div>;
 
   if (showResults) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-100">
         <div className="bg-white p-8 rounded-lg shadow-lg max-w-md w-full">
-          <h2 className="text-2xl font-bold text-center mb-6">Quiz Results</h2>
+          <h2 className="text-2xl font-bold text-center mb-6 text-gray-900">
+            Quiz Results
+          </h2>
           <div className="text-center">
-            <p className="text-xl mb-4">
+            <p className="text-xl mb-4 text-gray-900">
               Your score: {score} out of {shuffledQuestions.length}
             </p>
-            <p className="text-lg mb-6">
+            <p className="text-lg mb-6 text-gray-800">
               Percentage:{" "}
               {((score / shuffledQuestions.length) * 100).toFixed(1)}%
             </p>
             <button
               onClick={restartQuiz}
-              className="bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600 transition-colors"
+              className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
             >
               Try Again
             </button>
@@ -67,10 +70,10 @@ export default function Quiz() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100">
       <div className="bg-white p-8 rounded-lg shadow-lg max-w-md w-full">
-        <div className="mb-4 text-sm text-gray-500">
+        <div className="mb-4 text-sm text-gray-700">
           Question {currentQuestionIndex + 1} of {shuffledQuestions.length}
         </div>
-        <h2 className="text-xl font-semibold mb-6">
+        <h2 className="text-xl font-semibold mb-6 text-gray-900">
           {currentQuestion.question}
         </h2>
         <div className="space-y-3">
@@ -78,13 +81,13 @@ export default function Quiz() {
             <button
               key={index}
               onClick={() => handleAnswer(index)}
-              className="w-full text-left p-3 rounded-lg border border-gray-200 hover:bg-blue-50 hover:border-blue-500 transition-colors"
+              className="w-full text-left p-3 rounded-lg border border-gray-200 hover:bg-blue-50 hover:border-blue-500 transition-colors text-gray-800"
             >
               {option}
             </button>
           ))}
         </div>
-        <div className="mt-6 text-center text-gray-600">Score: {score}</div>
+        <div className="mt-6 text-center text-gray-800">Score: {score}</div>
       </div>
     </div>
   );
