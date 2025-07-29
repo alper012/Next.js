@@ -14,10 +14,10 @@ export async function POST(request: NextRequest) {
   await dbConnect();
   // Try to find user in Teacher first, then Student
   let user = await Teacher.findOne({ email });
-  let userType = "teacher";
+  let userRole = "teacher";
   if (!user) {
     user = await Student.findOne({ email });
-    userType = "student";
+    userRole = "student";
   }
   if (!user) {
     // Don't reveal if user exists
@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
   console.log(
     `Password reset link: ${
       process.env.NEXTAUTH_URL || "http://localhost:3000"
-    }/auth/reset-password?token=${token}&type=${userType}`
+    }/auth/reset-password?token=${token}&role=${userRole}`
   );
   return NextResponse.json({
     message: "If that email exists, a reset link will be sent.",

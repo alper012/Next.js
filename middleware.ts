@@ -1,13 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { getClientIP, createRateLimiter } from "./lib/rateLimit";
-
-// Create a general API rate limiter
-const generalLimiter = createRateLimiter({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 200, // 200 requests per window
-  message: "Too many requests from this IP, please try again later.",
-});
+import { getClientIP, apiLimiter } from "./lib/rateLimit";
 
 export function middleware(request: NextRequest) {
   // Only apply to API routes
@@ -20,28 +13,27 @@ export function middleware(request: NextRequest) {
     }
 
     // Apply rate limiting to all other API routes
-    return generalLimiter.store
-      .incr(clientIP)
+    return apiLimiter
+      .limit(clientIP)
       .then((result: any) => {
-        if (result.remainingPoints < 0) {
+        if (!result.success) {
           return NextResponse.json(
-            { error: generalLimiter.message },
+            {
+              error: "Too many requests from this IP, please try again later.",
+            },
             { status: 429 }
           );
         }
 
         const response = NextResponse.next();
-        response.headers.set(
-          "X-RateLimit-Limit",
-          generalLimiter.max.toString()
-        );
+        response.headers.set("X-RateLimit-Limit", result.limit.toString());
         response.headers.set(
           "X-RateLimit-Remaining",
-          result.remainingPoints.toString()
+          result.remaining.toString()
         );
         response.headers.set(
           "X-RateLimit-Reset",
-          result.resetTime.toISOString()
+          new Date(result.reset).toISOString()
         );
 
         return response;

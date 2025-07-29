@@ -6,7 +6,7 @@ export default function ResetPasswordPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get("token") || "";
-  const type = searchParams.get("type") || "";
+  const role = searchParams.get("role") || "";
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [error, setError] = useState("");
@@ -27,7 +27,7 @@ export default function ResetPasswordPage() {
       const res = await fetch("/api/auth/reset-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token, type, password }),
+        body: JSON.stringify({ token, role, password }),
       });
       const data = await res.json();
       if (!res.ok) {

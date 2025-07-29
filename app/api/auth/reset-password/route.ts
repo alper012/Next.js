@@ -7,8 +7,8 @@ import { withRateLimit, authLimiter } from "@/lib/rateLimit";
 
 export async function POST(request: NextRequest) {
   return withRateLimit(request, authLimiter, async (req) => {
-    const { token, type, password } = await request.json();
-    if (!token || !type || !password) {
+    const { token, role, password } = await request.json();
+    if (!token || !role || !password) {
       return NextResponse.json(
         { message: "Missing required fields" },
         { status: 400 }
@@ -22,12 +22,12 @@ export async function POST(request: NextRequest) {
     }
     await dbConnect();
     let user = null;
-    if (type === "teacher") {
+    if (role === "teacher") {
       user = await Teacher.findOne({
         passwordResetToken: token,
         passwordResetExpires: { $gt: new Date() },
       });
-    } else if (type === "student") {
+    } else if (role === "student") {
       user = await Student.findOne({
         passwordResetToken: token,
         passwordResetExpires: { $gt: new Date() },
