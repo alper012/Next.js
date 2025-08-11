@@ -8,13 +8,10 @@ import dbConnect from "@/lib/db";
 
 export async function GET() {
   try {
-    const session = await getServerSession(authOptions); //istekle birlikte gelen cookie'yi alip cozer ve bir session objesi olusturur (authentication)
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const session = await getServerSession(authOptions); // optional; allow public access
 
-    // Prevent admin access
-    if (session.user.role === "admin") {
+    // Prevent admin access only when logged in as admin
+    if (session?.user?.role === "admin") {
       return NextResponse.json(
         { error: "Admins cannot access quizzes" },
         { status: 403 }
@@ -23,20 +20,22 @@ export async function GET() {
 
     await dbConnect();
 
-    // Get user's role and majors
-    const user = await (session.user.role === "student"
-      ? Student.findOne({ email: session.user.email })
-      : Teacher.findOne({ email: session.user.email }));
-
-    if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    // If authenticated, resolve user to support teacher filtering
+    let user: any = null;
+    if (session?.user) {
+      user = await (session.user.role === "student"
+        ? Student.findOne({ email: session.user.email })
+        : Teacher.findOne({ email: session.user.email }));
+      if (!user) {
+        return NextResponse.json({ error: "User not found" }, { status: 404 });
+      }
     }
 
     // Build query based on user role
     let query: any = {};
 
     // If user is a teacher, show their own quizzes
-    if (session.user.role === "teacher") {
+    if (session?.user?.role === "teacher") {
       query.teacher = user._id;
     }
 

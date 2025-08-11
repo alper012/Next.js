@@ -15,9 +15,11 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json();
-    const { totalQuestions, major } = body;
+    const { quizId } = body as {
+      quizId?: string;
+    };
 
-    if (!totalQuestions || !major) {
+    if (!quizId) {
       return NextResponse.json(
         { error: "Missing required fields" },
         { status: 400 }
@@ -29,10 +31,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Student not found" }, { status: 404 });
     }
 
-    // Find the active attempt for this student and major
+    // Find the active attempt for this student and quiz
     const attempt = await Attempt.findOne({
       student: student._id,
-      major,
+      quiz: quizId,
       endedAt: { $exists: false },
     });
 
@@ -43,9 +45,9 @@ export async function POST(req: Request) {
       );
     }
 
-    // The score is already calculated in quiz-attempts-route (isCorrect variable)
-    // Just update the attempt with final details and end time
-    attempt.totalQuestions = totalQuestions;
+    // The score is already calculated during each answer
+    // Update the total questions based on answers recorded
+    attempt.totalQuestions = attempt.answers.length;
     attempt.endedAt = new Date();
     await attempt.save();
 

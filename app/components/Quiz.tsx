@@ -10,6 +10,7 @@ export default function Quiz() {
   const [score, setScore] = useState(0);
   const [showResults, setShowResults] = useState(false);
   const [shuffledQuestions, setShuffledQuestions] = useState<Question[]>([]);
+  const [activeQuizId, setActiveQuizId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [userRole, setUserRole] = useState<UserRole | null>(null);
@@ -53,15 +54,43 @@ export default function Quiz() {
   useEffect(() => {
     const fetchQuestions = async () => {
       try {
-        const queryParams = new URLSearchParams();
-        if (filters.major) queryParams.append("major", filters.major);
-
-        const response = await fetch(
-          `/api/questions?${queryParams.toString()}`
+        // Fetch available quizzes and pick the latest for the selected major
+        const quizzesRes = await fetch(`/api/quizzes`);
+        if (!quizzesRes.ok) throw new Error("Failed to fetch quizzes");
+        const quizzes = await quizzesRes.json();
+        const filtered = filters.major
+          ? quizzes.filter((q: any) => q.major === filters.major)
+          : quizzes;
+        if (!filtered.length) {
+          setShuffledQuestions([]);
+          setActiveQuizId(null);
+          setLoading(false);
+          return;
+        }
+        // Choose most recent quiz
+        filtered.sort(
+          (a: any, b: any) =>
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
         );
-        if (!response.ok) throw new Error("Failed to fetch questions");
-        const questions = await response.json();
-        setShuffledQuestions([...questions].sort(() => Math.random() - 0.5));
+        const selectedQuiz = filtered[0];
+        setActiveQuizId(selectedQuiz._id);
+
+        const quizQuestions: Question[] = selectedQuiz.questions.map(
+          (q: any) => ({
+            id: q.id,
+            question: q.question,
+            options: q.options,
+            correctAnswer: q.correctAnswer,
+            major: selectedQuiz.major,
+            createdBy: q.createdBy ?? "",
+            createdAt: q.createdAt,
+            updatedAt: q.updatedAt,
+          })
+        );
+
+        setShuffledQuestions(
+          [...quizQuestions].sort(() => Math.random() - 0.5)
+        );
         setLoading(false);
       } catch (error) {
         setError("Failed to load questions");
@@ -85,15 +114,20 @@ export default function Quiz() {
     } else {
       // For logged-in users, get score from backend
       try {
+        if (!activeQuizId) {
+          setError("Quiz not initialized.");
+          return;
+        }
+
         const response = await fetch("/api/quiz-attempts", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
+            quizId: activeQuizId,
             questionId: currentQuestion.id,
             selectedOption,
-            major: currentQuestion.major,
           }),
         });
 
@@ -134,6 +168,9 @@ export default function Quiz() {
       setShowResults(true);
       if (session?.user) {
         try {
+          if (!activeQuizId) {
+            return;
+          }
           const response = await fetch("/api/quiz-attempts/complete", {
             method: "POST",
             headers: {
@@ -141,7 +178,7 @@ export default function Quiz() {
             },
             body: JSON.stringify({
               totalQuestions: shuffledQuestions.length,
-              major: currentQuestion.major,
+              quizId: activeQuizId,
             }),
           });
 

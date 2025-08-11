@@ -1,9 +1,10 @@
 "use client";
 
+import { Suspense } from "react";
 import LoginForm from "@/app/components/LoginForm";
 import { useSearchParams } from "next/navigation";
 
-export default function LoginPage() {
+function LoginPageContent() {
   const searchParams = useSearchParams();
   const pendingApproval = searchParams.get("pendingApproval");
 
@@ -24,5 +25,13 @@ export default function LoginPage() {
       )}
       <LoginForm />
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div />}>
+      <LoginPageContent />
+    </Suspense>
   );
 }

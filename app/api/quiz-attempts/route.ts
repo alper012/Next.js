@@ -3,7 +3,6 @@ import { getServerSession } from "next-auth";
 import Attempt from "@/models/Attempt";
 import Student from "@/models/Student";
 import Quiz from "@/models/Quiz";
-import Question from "@/models/Question";
 import dbConnect from "@/lib/db";
 import { withRateLimit, apiLimiter } from "@/lib/rateLimit";
 
@@ -19,9 +18,13 @@ export async function POST(req: NextRequest) {
       }
 
       const body = await req.json();
-      const { questionId, selectedOption, major } = body;
+      const { quizId, questionId, selectedOption } = body as {
+        quizId?: string;
+        questionId?: number;
+        selectedOption?: number;
+      };
 
-      if (!questionId || selectedOption === undefined || !major) {
+      if (!quizId || questionId === undefined || selectedOption === undefined) {
         return NextResponse.json(
           { error: "Missing required fields" },
           { status: 400 }
@@ -36,41 +39,38 @@ export async function POST(req: NextRequest) {
         );
       }
 
-      // Fetch the question to get the correct answer
-      const question = await Question.findOne({ id: questionId });
-      if (!question) {
-        return NextResponse.json(
-          { error: "Question not found" },
-          { status: 404 }
-        );
-      }
-
-      // Calculate if the answer is correct on the backend
-      const isCorrect = selectedOption === question.correctAnswer;
-
-      // Find a quiz for this major (required for attempt tracking)
-      const quiz = await Quiz.findOne({ major }).sort({ createdAt: -1 });
+      // Load the quiz and validate the requested question
+      const quiz = await Quiz.findById(quizId);
       if (!quiz) {
+        return NextResponse.json({ error: "Quiz not found" }, { status: 404 });
+      }
+
+      // Find the embedded question by its sequential id
+      const embeddedQuestion = quiz.questions.find(
+        (q: any) => q.id === questionId
+      );
+      if (!embeddedQuestion) {
         return NextResponse.json(
-          {
-            error: `No quiz available for ${major} major. Please contact your teacher.`,
-          },
+          { error: "Question not found in quiz" },
           { status: 404 }
         );
       }
+
+      // Calculate if the answer is correct using embedded question
+      const isCorrect = selectedOption === embeddedQuestion.correctAnswer;
 
       // Check if student already has an active attempt for this major
       let attempt = await Attempt.findOne({
-        student: student._id, //Belirli bir öğrenciye ait olmalı
-        major, //Belirli bir ana dal (major) ile ilişkili olmalı
-        endedAt: { $exists: false }, // 3. Henüz sona ermemiş (aktif) olmalı
+        student: student._id,
+        quiz: quiz._id,
+        endedAt: { $exists: false },
       });
 
       if (!attempt) {
         // Check if student has already reached the maximum of 2 attempts for this major
         const completedAttempts = await Attempt.countDocuments({
           student: student._id,
-          major,
+          major: quiz.major,
           endedAt: { $exists: true },
         });
 
@@ -90,7 +90,7 @@ export async function POST(req: NextRequest) {
           student: student._id,
           score: 0,
           totalQuestions: 0,
-          major,
+          major: quiz.major,
           answers: [],
           startedAt: new Date(),
         });
